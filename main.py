@@ -1,17 +1,26 @@
 from fastapi import FastAPI,HTTPException
 from pydantic import BaseModel
+from datetime import datetime
 
 app = FastAPI()
 
 class TaskCreate(BaseModel):
     title: str
     description: str | None=None
-    status: str 
+    status: str | None=None
+
+class TaskResponse(BaseModel):
+    id: int
+    title: str
+    description: str | None=None
+    status: str | None=None
+    created_at: datetime = datetime.now()
+
 
 fake_tasks=[
-    {"id":1, "title":"Buy Groceries", "status":"pending","description":None},
-    {"id":2, "title":"Read fastapi docs", "status":"done","description": None},
-    {"id":3, "title":"Build task manager API", "status":"pending", "description": None}
+    {"id":1, "title":"Buy Groceries", "status":"pending","description":None,"created_at": datetime.now()},
+    {"id":2, "title":"Read fastapi docs", "status":"done","description": None,"created_at": datetime.now()},
+    {"id":3, "title":"Build task manager API", "status":"pending", "description": None,"created_at": datetime.now()}
 ]
 
 
@@ -34,14 +43,14 @@ def get_tasks(status: str | None = None,limit: int=10):
 
     return {"tasks":filtered[:min(len(filtered),limit)] , "total": min(len(filtered),limit)}
 
-@app.get("/tasks/{task_id}")
+@app.get("/tasks/{task_id}",response_model=TaskResponse)
 def get_task(task_id: int):
     for task in fake_tasks:
         if task["id"]==task_id:
             return task
     raise HTTPException(status_code=404, detail=f"Task with id {task_id} not found")
 
-@app.post("/tasks",status_code=201)
+@app.post("/tasks",status_code=201,response_model=TaskResponse)
 def post_task(task: TaskCreate):
     new_task={
         "id": len(fake_tasks)+1,
@@ -52,3 +61,25 @@ def post_task(task: TaskCreate):
     fake_tasks.append(new_task)
     return new_task
 
+@app.put("/tasks/{task_id}",response_model=TaskResponse)
+def update_task(task_id: int, task: TaskCreate):
+    for index,existingtask in enumerate(fake_tasks):
+        if existingtask["id"]==task_id:
+            updated_task={
+                "id": task_id,
+                "title": task.title,
+                "status": task.status,
+                "description": task.description,
+                "created_at": existingtask.get("created_at", datetime.now())
+            }
+            fake_tasks[index]=updated_task
+            return updated_task
+    raise HTTPException(status_code=404, detail=f"Task with {task_id} doesn't exist")
+
+@app.delete("/tasks/{task_id}",status_code=204)
+def delete_task(task_id: int):
+    for index,task in enumerate(fake_tasks):
+        if task["id"]==task_id:
+            fake_tasks.pop(index)
+            return 
+    raise HTTPException(status_code=404, detail=f"Task with id {task_id} is not found")
