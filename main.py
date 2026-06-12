@@ -1,19 +1,26 @@
 from fastapi import FastAPI,HTTPException
 from pydantic import BaseModel
 from datetime import datetime
+from enum import Enum
+
+class TaskStatus(str,Enum):
+    pending = "pending"
+    done = "done"
+    in_progress="in_progress"
+
 
 app = FastAPI()
 
 class TaskCreate(BaseModel):
     title: str
     description: str | None=None
-    status: str | None=None
+    status: TaskStatus = TaskStatus.pending
 
 class TaskResponse(BaseModel):
     id: int
     title: str
     description: str | None=None
-    status: str | None=None
+    status: TaskStatus | None=None
     created_at: datetime = datetime.now()
 
 
@@ -43,25 +50,26 @@ def get_tasks(status: str | None = None,limit: int=10):
 
     return {"tasks":filtered[:min(len(filtered),limit)] , "total": min(len(filtered),limit)}
 
-@app.get("/tasks/{task_id}",response_model=TaskResponse)
+@app.get("/tasks/{task_id}",response_model=TaskResponse,response_model_exclude_none=True)
 def get_task(task_id: int):
     for task in fake_tasks:
         if task["id"]==task_id:
             return task
     raise HTTPException(status_code=404, detail=f"Task with id {task_id} not found")
 
-@app.post("/tasks",status_code=201,response_model=TaskResponse)
+@app.post("/tasks",status_code=201,response_model=TaskResponse,response_model_exclude_none=True)
 def post_task(task: TaskCreate):
     new_task={
         "id": len(fake_tasks)+1,
         "title": task.title,
         "status": task.status,
-        "description": task.description
+        "description": task.description,
+        "created_at": datetime.now()
     }
     fake_tasks.append(new_task)
     return new_task
 
-@app.put("/tasks/{task_id}",response_model=TaskResponse)
+@app.put("/tasks/{task_id}",response_model=TaskResponse,response_model_exclude_none=True)
 def update_task(task_id: int, task: TaskCreate):
     for index,existingtask in enumerate(fake_tasks):
         if existingtask["id"]==task_id:
