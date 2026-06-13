@@ -1,5 +1,5 @@
 from fastapi import FastAPI,HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel,Field
 from datetime import datetime
 from enum import Enum
 
@@ -21,7 +21,7 @@ class TaskResponse(BaseModel):
     title: str
     description: str | None=None
     status: TaskStatus | None=None
-    created_at: datetime = datetime.now()
+    created_at: datetime = Field(default_factory=datetime.now)
 
 
 fake_tasks=[
@@ -42,13 +42,13 @@ def health_check():
     return {"status": "ok"}
 
 @app.get("/tasks")
-def get_tasks(status: str | None = None,limit: int=10):
-    if status==None:
-        return {"tasks":fake_tasks[:min(len(fake_tasks),limit)], "total":min(len(fake_tasks),limit)}
+def get_tasks(status: TaskStatus | None = None,limit: int=10):
+    if status is None:
+        return {"tasks":fake_tasks[:limit], "total":min(len(fake_tasks),limit)}
 
-    filtered = [task for task in fake_tasks if task["status"]==status]
+    filtered = [task for task in fake_tasks if task["status"]==status.value]
 
-    return {"tasks":filtered[:min(len(filtered),limit)] , "total": min(len(filtered),limit)}
+    return {"tasks":filtered[:limit] , "total": min(len(filtered),limit)}
 
 @app.get("/tasks/{task_id}",response_model=TaskResponse,response_model_exclude_none=True)
 def get_task(task_id: int):
@@ -82,7 +82,7 @@ def update_task(task_id: int, task: TaskCreate):
             }
             fake_tasks[index]=updated_task
             return updated_task
-    raise HTTPException(status_code=404, detail=f"Task with {task_id} doesn't exist")
+    raise HTTPException(status_code=404, detail=f"Task with id{task_id} not found")
 
 @app.delete("/tasks/{task_id}",status_code=204)
 def delete_task(task_id: int):
@@ -90,4 +90,4 @@ def delete_task(task_id: int):
         if task["id"]==task_id:
             fake_tasks.pop(index)
             return 
-    raise HTTPException(status_code=404, detail=f"Task with id {task_id} is not found")
+    raise HTTPException(status_code=404, detail=f"Task with id {task_id}  not found")
