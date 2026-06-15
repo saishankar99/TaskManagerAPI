@@ -23,6 +23,10 @@ class TaskResponse(BaseModel):
     status: TaskStatus | None=None
     created_at: datetime = Field(default_factory=datetime.now)
 
+class TaskUpdate(BaseModel):
+    title: str | None=None
+    description: str | None=None
+    status: TaskStatus | None=None
 
 fake_tasks=[
     {"id":1, "title":"Buy Groceries", "status":"pending","description":None,"created_at": datetime.now()},
@@ -91,3 +95,13 @@ def delete_task(task_id: int):
             fake_tasks.pop(index)
             return 
     raise HTTPException(status_code=404, detail=f"Task with id {task_id}  not found")
+
+@app.patch("/tasks/{task_id}", response_model=TaskResponse,response_model_exclude_none=True)
+def patch_task(task_id: int, task: TaskUpdate):
+    for index,existing_task in enumerate(fake_tasks):
+        if existing_task["id"]==task_id:
+            patch_data=task.model_dump(exclude_none=True)
+            existing_task.update(patch_data)
+            fake_tasks[index]=existing_task
+            return existing_task
+    raise HTTPException(status_code=404, detail=f"Task with id {task_id} not found")
