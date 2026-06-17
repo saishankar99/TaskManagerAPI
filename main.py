@@ -9,8 +9,6 @@ class TaskStatus(str,Enum):
     in_progress="in_progress"
 
 
-app = FastAPI()
-
 class TaskCreate(BaseModel):
     title: str
     description: str | None=None
@@ -34,7 +32,12 @@ fake_tasks=[
     {"id":3, "title":"Build task manager API", "status":"pending", "description": None,"created_at": datetime.now()}
 ]
 
+app = FastAPI()
 
+from database import engine
+import models
+
+models.Base.metadata.create_all(bind=engine)
 
 @app.get("/")
 def read_root():
@@ -100,7 +103,7 @@ def delete_task(task_id: int):
 def patch_task(task_id: int, task: TaskUpdate):
     for index,existing_task in enumerate(fake_tasks):
         if existing_task["id"]==task_id:
-            patch_data=task.model_dump(exclude_none=True)
+            patch_data=task.model_dump(exclude_unset=True)
             existing_task.update(patch_data)
             fake_tasks[index]=existing_task
             return existing_task
