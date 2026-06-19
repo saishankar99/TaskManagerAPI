@@ -10,7 +10,7 @@ DATABASE_URL="sqlite:///./tasks.db"
 engine=create_engine(DATABASE_URL,connect_args={"check_same_thread": False})
 
 """Used to create sessions for the specified engine with default args."""
-SessionLocal=sessionmaker(autocommit=False,autoflush=False,engine=engine)
+SessionLocal=sessionmaker(autocommit=False,autoflush=False,bind=engine)
 
 
 """Base class for all the ORM(Object Relation Mapper) classes"""

@@ -1,7 +1,10 @@
-from fastapi import FastAPI,HTTPException
+from fastapi import FastAPI,HTTPException,Depends
 from pydantic import BaseModel,Field
 from datetime import datetime
 from enum import Enum
+from sqlalchemy.orm import Session
+from database import engine,get_db
+import models
 
 class TaskStatus(str,Enum):
     pending = "pending"
@@ -34,8 +37,7 @@ fake_tasks=[
 
 app = FastAPI()
 
-from database import engine
-import models
+
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -49,31 +51,30 @@ def health_check():
     return {"status": "ok"}
 
 @app.get("/tasks")
-def get_tasks(status: TaskStatus | None = None,limit: int=10):
-    if status is None:
-        return {"tasks":fake_tasks[:limit], "total":min(len(fake_tasks),limit)}
-
-    filtered = [task for task in fake_tasks if task["status"]==status.value]
-
-    return {"tasks":filtered[:limit] , "total": min(len(filtered),limit)}
+def get_tasks(status: TaskStatus | None = None,limit: int=10,db: Session = Depends(get_db)):
+    query=db.query(models.Task)
+    if status is not None:
+        query=query.filter(models.Task.status==status.value)
+    tasks=query.limit(limit).all()
+    return {"tasks":tasks, "total_tasks":len(tasks)}
 
 @app.get("/tasks/{task_id}",response_model=TaskResponse,response_model_exclude_none=True)
-def get_task(task_id: int):
-    for task in fake_tasks:
-        if task["id"]==task_id:
-            return task
-    raise HTTPException(status_code=404, detail=f"Task with id {task_id} not found")
+def get_task(task_id: int,db: Session = Depends(get_db)):
+    task=db.query(models.Task).filter(models.Task.id==task_id).first()
+    if task is None:
+        raise HTTPException(status_code=404,detail=f"task with {task_id} not found")
+    return task
 
 @app.post("/tasks",status_code=201,response_model=TaskResponse,response_model_exclude_none=True)
-def post_task(task: TaskCreate):
-    new_task={
-        "id": len(fake_tasks)+1,
-        "title": task.title,
-        "status": task.status,
-        "description": task.description,
-        "created_at": datetime.now()
-    }
-    fake_tasks.append(new_task)
+def post_task(task: TaskCreate,db: Session = Depends(get_db)):
+    new_task=models.Task(
+        title=task.title,
+        status=task.status.value,
+        description=task.description
+    )
+    db.add(new_task)
+    db.commit()
+    db.refresh(new_task)
     return new_task
 
 @app.put("/tasks/{task_id}",response_model=TaskResponse,response_model_exclude_none=True)
