@@ -29,11 +29,6 @@ class TaskUpdate(BaseModel):
     description: str | None=None
     status: TaskStatus | None=None
 
-fake_tasks=[
-    {"id":1, "title":"Buy Groceries", "status":"pending","description":None,"created_at": datetime.now()},
-    {"id":2, "title":"Read fastapi docs", "status":"done","description": None,"created_at": datetime.now()},
-    {"id":3, "title":"Build task manager API", "status":"pending", "description": None,"created_at": datetime.now()}
-]
 
 app = FastAPI()
 
@@ -78,34 +73,37 @@ def post_task(task: TaskCreate,db: Session = Depends(get_db)):
     return new_task
 
 @app.put("/tasks/{task_id}",response_model=TaskResponse,response_model_exclude_none=True)
-def update_task(task_id: int, task: TaskCreate):
-    for index,existingtask in enumerate(fake_tasks):
-        if existingtask["id"]==task_id:
-            updated_task={
-                "id": task_id,
-                "title": task.title,
-                "status": task.status,
-                "description": task.description,
-                "created_at": existingtask.get("created_at", datetime.now())
-            }
-            fake_tasks[index]=updated_task
-            return updated_task
-    raise HTTPException(status_code=404, detail=f"Task with id{task_id} not found")
+def update_task(task_id: int, task: TaskCreate,db: Session = Depends(get_db)):
+    existing_task=db.query(models.Task).filter(models.Task.id==task_id).first()
+    if existing_task is None:
+        raise HTTPException(status_code=404, detail=f"Task with id {task_id} not found ")
+    existing_task.title=task.title
+    existing_task.description=task.description
+    existing_task.status=task.status
+    db.commit()
+    db.refresh(existing_task)
+    return existing_task
 
 @app.delete("/tasks/{task_id}",status_code=204)
-def delete_task(task_id: int):
-    for index,task in enumerate(fake_tasks):
-        if task["id"]==task_id:
-            fake_tasks.pop(index)
-            return 
-    raise HTTPException(status_code=404, detail=f"Task with id {task_id}  not found")
+def delete_task(task_id: int,db: Session = Depends(get_db)):
+    task=db.query(models.Task).filter(models.Task.id==task_id).first()
+    if task is None:
+        raise HTTPException(status_code=404, detail=f"Task with id {task_id} not found")
+    db.delete(task)
+    db.commit()
+    return 
 
 @app.patch("/tasks/{task_id}", response_model=TaskResponse,response_model_exclude_none=True)
-def patch_task(task_id: int, task: TaskUpdate):
-    for index,existing_task in enumerate(fake_tasks):
-        if existing_task["id"]==task_id:
-            patch_data=task.model_dump(exclude_unset=True)
-            existing_task.update(patch_data)
-            fake_tasks[index]=existing_task
-            return existing_task
-    raise HTTPException(status_code=404, detail=f"Task with id {task_id} not found")
+def patch_task(task_id: int, task: TaskUpdate, db: Session = Depends(get_db)):
+    existing_task=db.query(models.Task).filter(models.Task.id==task_id).first()
+    if existing_task is None:
+        raise HTTPException(status_code=404, detail=f"Task with id {task_id} not found")
+    patch_data=task.model_dump(exclude_unset=True)
+    if "status" in patch_data and patch_data["status"] is not None:
+        patch_data["status"]=patch_data["status"].value
+    for key,value in patch_data.items():
+        setattr(existing_task,key,value)
+    db.commit()
+    db.refresh(existing_task)
+    return existing_task
+    
