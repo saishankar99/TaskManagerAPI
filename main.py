@@ -16,6 +16,7 @@ class TaskCreate(BaseModel):
     title: str
     description: str | None=None
     status: TaskStatus = TaskStatus.pending
+    due_date: datetime | None=None
 
 class TaskResponse(BaseModel):
     id: int
@@ -23,11 +24,13 @@ class TaskResponse(BaseModel):
     description: str | None=None
     status: TaskStatus | None=None
     created_at: datetime = Field(default_factory=datetime.now)
+    due_date: datetime | None=None
 
 class TaskUpdate(BaseModel):
     title: str | None=None
     description: str | None=None
     status: TaskStatus | None=None
+    due_date: datetime | None=None
 
 
 app = FastAPI()
@@ -65,7 +68,8 @@ def post_task(task: TaskCreate,db: Session = Depends(get_db)):
     new_task=models.Task(
         title=task.title,
         status=task.status.value,
-        description=task.description
+        description=task.description,
+        due_date=task.due_date
     )
     db.add(new_task)
     db.commit()
@@ -80,6 +84,7 @@ def update_task(task_id: int, task: TaskCreate,db: Session = Depends(get_db)):
     existing_task.title=task.title
     existing_task.description=task.description
     existing_task.status=task.status
+    existing_task.due_date=task.due_date
     db.commit()
     db.refresh(existing_task)
     return existing_task

@@ -10,3 +10,5 @@ class Task(Base):
     description = Column(String, nullable=True)
     status = Column(String, default="pending")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    due_date = Column(DateTime(timezone=True), nullable=True)
+    
