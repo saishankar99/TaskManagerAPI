@@ -7,7 +7,7 @@ databasedriver://username:password@hostname:port/<databasename>"""
 DATABASE_URL=settings.database_url
 
 """Used to create an engine.. a pool of connections to the specified database ur with some connect_arguments"""
-engine=create_engine(DATABASE_URL,connect_args={"check_same_thread": False})
+engine=create_engine(DATABASE_URL)
 
 """Used to create sessions for the specified engine with default args."""
 SessionLocal=sessionmaker(autocommit=False,autoflush=False,bind=engine)
