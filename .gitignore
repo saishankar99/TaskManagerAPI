@@ -2,3 +2,4 @@ taskenv
 __pycache__
 tasks.db
 .env
+test.db
