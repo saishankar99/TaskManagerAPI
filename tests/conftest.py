@@ -6,7 +6,7 @@ from database import Base,get_db
 from main import app
 import models
 
-TEST_DATABASE_URL="sqlite://./test.db"
+TEST_DATABASE_URL="sqlite:///./test.db"
 
 test_engine = create_engine(TEST_DATABASE_URL,connect_args={"check_same_thread":False})
 
