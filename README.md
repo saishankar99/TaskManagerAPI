@@ -1,6 +1,11 @@
 # TaskManagerAPI
 A RESTful backend API for managing tasks, built with FastAPI and postgreSQL. Supports all the crud operations, status filtering, and automatic interactive documentations.
 
+## Live Demo
+
+- **API:** https://taskmanagerapi-production-4bbc.up.railway.app
+- **Interactive Docs:** https://taskmanagerapi-production-4bbc.up.railway.app/docs
+
 ## Features
 
 - Full CRUD operations for tasks (Create, Read , Update , Delete)
